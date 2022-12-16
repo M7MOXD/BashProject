@@ -15,7 +15,7 @@ function mainMenu {
         "Select DB") selectDB;;
         "Drop DB") dropDB;;
         "Exit") exit;;
-        *) zenity --error --title="Error Message" --text="Please Choose Again"; mainMenu;;
+        *) zenity --error --title="Error Message" --text="Wrong Choice"; mainMenu;;
     esac
 }
 mainMenu
@@ -45,7 +45,8 @@ function dropDB {
     if [[ $dbName != "" ]]
     then
         rm -r ./DBMS/$dbName 2>> /dev/null;
-        if [[ $? == 0 ]]; then
+        if [[ $? == 0 ]]
+        then
             zenity --info --title="Info Message" --text="Database Dropped Successfully";
         else
             zenity --error --title="Error Message" --text="Database Not found";
@@ -58,7 +59,8 @@ function selectDB {
     if [[ $dbName != "" ]]
     then
         cd ./DBMS/$dbName 2>> /dev/null;
-        if [[ $? == 0 ]]; then
+        if [[ $? == 0 ]]
+        then
             zenity --info --title="Info Message" --text="Database $dbName was Successfully Selected";
             tableMenu;
         else
@@ -81,7 +83,7 @@ function tableMenu {
     "Back To Main Menu" \
     "Exit");
     case $ch in
-        "Create Table") echo "Create Table";;
+        "Create Table") createTable;;
         "List Tables") listTables;;
         "Drop Table") dropTable;;
         "Insert Into Table") echo "Insert Into Table";;
@@ -90,8 +92,69 @@ function tableMenu {
         "Update Table") echo "Update Table";;
         "Back To Main Menu") cd ../.. 2>> /dev/null; mainMenu;;
         "Exit") exit;;
-        *) zenity --error --title="Error Message" --text="Please Choose Again"; tableMenu;;
+        *) zenity --error --title="Error Message" --text="Wrong Choice"; tableMenu;;
     esac
+}
+function createTable {
+    tableName=$(zenity --entry --title="Table Name" --text="Enter Table Name");
+    if [[ -f $tableName ]]
+    then
+        zenity --error --title="Error Message" --text="table already existed ,choose another name";
+        tableMenu;
+    fi
+    colsNum=$(zenity --entry --title="Number of Columns" --text="Enter Number of Columns");
+    counter=1
+    sep=":"
+    rSep="\n"
+    pKey=""
+    metaData="Field"$sep"Type"$sep"key"
+    while [[ $counter -le $colsNum ]]
+    do
+        colName=$(zenity --entry --title="Name of Column No.$counter" --text="Enter Name of Column No.$counter");
+        chType=$(zenity --list \
+        --title="Column Type" \
+        --column="Type" \
+        "int" \
+        "str");
+        case $chType in
+            "int") colType="int";;
+            "str") colType="str";;
+            *) zenity --error --title="Error Message" --text="Wrong Choice"; tableMenu;;
+        esac
+        if [[ $pKey == "" ]]
+        then
+            chPK=$(zenity --list \
+            --title="Make PK" \
+            --column="Answer" \
+            "Yes" \
+            "No");
+            case $chPK in
+                "Yes") pKey="PK"; metaData+=$rSep$colName$sep$colType$sep$pKey;;
+                "No") metaData+=$rSep$colName$sep$colType$sep"";;
+                *) metaData+=$rSep$colName$sep$colType$sep"";;
+            esac
+        else
+            metaData+=$rSep$colName$sep$colType$sep"";
+        fi
+        if [[ $counter == $colsNum ]]
+        then
+            temp=$temp$colName;
+        else
+            temp=$temp$colName$sep;
+        fi
+        ((counter++))
+    done
+    touch $tableName .$tableName
+    echo -e $metaData  >> .$tableName
+    echo -e $temp >> $tableName
+    if [[ $? == 0 ]]
+    then
+        zenity --info --title="Info Message" --text="Table Created Successfully";
+        tableMenu;
+    else
+        zenity --error --title="Error Message" --text="Error Creating Table $tableName";
+        tableMenu;
+    fi
 }
 function listTables {
     list=$(ls -l | grep ^- | wc -l);
