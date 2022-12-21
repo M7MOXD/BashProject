@@ -86,7 +86,7 @@ function tableMenu {
         "List Tables") listTables;;
         "Drop Table") dropTable;;
         "Insert Into Table") insert;;
-        "Select From Table") echo "Select From Table";;
+        "Select From Table") selectMenu;;
         "Delete From Table") deleteFromTable;;
         "Update Table") updateTable;;
         "Back To Main Menu") cd ../..; mainMenu;;
@@ -305,4 +305,24 @@ function updateTable {
         fi
     fi
     tableMenu;
+}
+function selectMenu {
+    ch=$(zenity --list \
+    --title="Select Menu" \
+    --column="Operations" \
+    "Select All Records" \
+    "Select a Column" \
+    "Select a Record" \
+    "Back To Table Menu" \
+    "Back To Main Menu" \
+    "Exit");
+    case $ch in
+        "Select All Records") echo "Select All Records";;
+        "Select a Column") echo "Select a Column";;
+        "Select a Record") echo "Select a Record";;
+        "Back To Table Menu") tableMenu;;
+        "Back To Main Menu") cd ../..; mainMenu;;
+        "Exit") exit;;
+        *) zenity --error --title="Error Message" --text="Wrong Choice"; selectMenu;;
+    esac
 }
