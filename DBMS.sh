@@ -21,22 +21,25 @@ function mainMenu {
 mainMenu
 function createDB {
     dbName=$(zenity --entry --title="Dtabase Name" --text="Enter Database Name");
-    mkdir ./DBMS/$dbName 2>> /dev/null;
-    if [[ $? == 0 ]]
+    if [[ $dbName != "" ]]
     then
-        zenity --info --title="Info Message" --text="Database Created Successfully";
-    else
-        zenity --error --title="Error Message" --text="Error Creating Database $dbName";
+        mkdir ./DBMS/$dbName 2>> /dev/null;
+        if [[ $? == 0 ]]
+        then
+            zenity --info --title="Info Message" --text="Database Created Successfully";
+        else
+            zenity --error --title="Error Message" --text="Error Creating Database $dbName";
+        fi
     fi
     mainMenu;
 }
 function listDBs {
     list=$(ls -l ./DBMS/ | grep ^d | wc -l);
-    if [[ $list == 0 ]]
+    if [[ $list != 0 ]]
     then
-        zenity --info --title="Info Message" --text="No Databases To Be Listed";
-    else
         zenity --list --title="List of Databases" --column="Database" $(ls -l ./DBMS/ | cut -d" " -f9);
+    else
+        zenity --info --title="Info Message" --text="No Databases To Be Listed";
     fi
     mainMenu;
 }
@@ -61,11 +64,9 @@ function selectDB {
         then
             zenity --info --title="Info Message" --text="Database $dbName was Successfully Selected";
             tableMenu;
-        else
-            zenity --error --title="Error Message" --text="Database $dbName wasn't found";
-            mainMenu;
         fi
     fi
+    mainMenu;
 }
 function tableMenu {
     ch=$(zenity --list \
@@ -87,8 +88,8 @@ function tableMenu {
         "Insert Into Table") insert;;
         "Select From Table") echo "Select From Table";;
         "Delete From Table") deleteFromTable;;
-        "Update Table") echo "Update Table";;
-        "Back To Main Menu") cd ../.. 2>> /dev/null; mainMenu;;
+        "Update Table") updateTable;;
+        "Back To Main Menu") cd ../..; mainMenu;;
         "Exit") exit;;
         *) zenity --error --title="Error Message" --text="Wrong Choice"; tableMenu;;
     esac
@@ -97,7 +98,7 @@ function createTable {
     tableName=$(zenity --entry --title="Table Name" --text="Enter Table Name");
     if [[ -f $tableName ]]
     then
-        zenity --error --title="Error Message" --text="table already existed ,choose another name";
+        zenity --error --title="Error Message" --text="Table Already Existed, Choose Another Name";
         tableMenu;
     fi
     colsNum=$(zenity --entry --title="Number of Columns" --text="Enter Number of Columns");
@@ -117,7 +118,7 @@ function createTable {
         case $chType in
             "int") colType="int";;
             "str") colType="str";;
-            *) zenity --error --title="Error Message" --text="Wrong Choice"; tableMenu;;
+            *) tableMenu;;
         esac
         if [[ $pKey == "" ]]
         then
@@ -148,19 +149,18 @@ function createTable {
     if [[ $? == 0 ]]
     then
         zenity --info --title="Info Message" --text="Table Created Successfully";
-        tableMenu;
     else
         zenity --error --title="Error Message" --text="Error Creating Table $tableName";
-        tableMenu;
     fi
+    tableMenu;
 }
 function listTables {
     list=$(ls -l | grep ^- | wc -l);
-    if [[ $list == 0 ]]
+    if [[ $list != 0 ]]
     then
-        zenity --info --title="Info Message" --text="No Tables To Be Listed";
-    else
         zenity --list --title="List of Tables" --column="Tables" $(ls -l | cut -d" " -f9);
+    else
+        zenity --info --title="Info Message" --text="No Tables To Be Listed";
     fi
     tableMenu;
 }
@@ -232,27 +232,24 @@ function deleteFromTable {
     if [[ $tableName != "" ]]
     then
         colsNum=$(awk 'END{print NR}' .$tableName);
-        sep=":";
-        rSep="\n";
         for (( i = 2; i <= $colsNum; i++ ))
         do
             colName=$(awk 'BEGIN{FS=":"}{ if(NR=='$i') print $1}' .$tableName);
-            colType=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $2}' .$tableName);
             colKey=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $3}' .$tableName);
-            ((fID=$i-1))
+            ((fID=$i-1));
             if [[ $colKey == "PK" ]]
             then
                 break;
             fi
         done
-        val=$(zenity --entry --title="PK $colName" --text="Enter Value");
-        if [[ $val != "" ]]
+        pkValue=$(zenity --entry --title="PK $colName" --text="Enter Value");
+        if [[ $pkValue != "" ]]
         then
-            res=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$val'") print $'$fID'}' $tableName)
+            res=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
             if [[ $res != "" ]]
             then
-                NR=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$val'") print NR}' $tableName)
-                sed -i ''$NR'd' $tableName 2>> /dev/null
+                NR=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$pkValue'") print NR}' $tableName);
+                sed -i ''$NR'd' $tableName 2>> /dev/null;
                 if [[ $? == 0 ]]
                 then
                     zenity --info --title="Info Message" --text="Row Deleted Successfully";
@@ -260,9 +257,51 @@ function deleteFromTable {
                     zenity --error --title="Error Message" --text="Error Deleting Data From Table $tableName";
                 fi
             else
-                zenity --error --title="Error Message" --text="Value not Found"
+                zenity --error --title="Error Message" --text="Value not Found";
             fi
-            tableMenu;
+        fi
+    fi
+    tableMenu;
+}
+function updateTable {
+    tableName=$(zenity --list --title="List of Tables" --column="Table" $(ls -l | cut -d" " -f9));
+    if [[ $tableName != "" ]]
+    then
+        colsNum=$(awk 'END{print NR}' .$tableName);
+        for (( i = 2; i <= $colsNum; i++ ))
+        do
+            colName=$(awk 'BEGIN{FS=":"}{ if(NR=='$i') print $1}' .$tableName);
+            colKey=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $3}' .$tableName);
+            ((fID=$i-1));
+            if [[ $colKey == "PK" ]]
+            then
+                break;
+            fi
+        done
+        pkValue=$(zenity --entry --title="PK $colName" --text="Enter Value");
+        if [[ $pkValue != "" ]]
+        then
+            res=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
+            if [[ $res != "" ]]
+            then
+                setField=$(zenity --list --title="Tables Fields" --column="Filed" $(awk 'BEGIN{FS=":"; ORS=" "}{if (NR != 1) print $1}' .$tableName));
+                if [[ $setField != "" ]]
+                then
+                    setFid=$(awk 'BEGIN{FS=":"}{if (NR==1) {for (i=1; i<=NF; i++) {if ($i=="'$setField'") print i}}}' $tableName);
+                    newValue=$(zenity --entry --title="$setField New Value" --text="Enter $setField New Value");
+                    NR=$(awk 'BEGIN{FS=":"}{if ($'$fID' == "'$pkValue'") print NR}' $tableName);
+                    oldValue=$(awk 'BEGIN{FS=":"}{if (NR=='$NR') {for (i=1; i<=NF; i++) {if (i=='$setFid') print $i}}}' $tableName);
+                    sed -i ''$NR's/'$oldValue'/'$newValue'/g' $tableName 2>> /dev/null;
+                    if [[ $? == 0 ]]
+                    then
+                        zenity --info --title="Info Message" --text="Row Updated Successfully";
+                    else
+                        zenity --error --title="Error Message" --text="Error Updating Data From Table $tableName";
+                    fi
+                fi
+            else
+                zenity --error --title="Error Message" --text="Value not Found";
+            fi
         fi
     fi
     tableMenu;
