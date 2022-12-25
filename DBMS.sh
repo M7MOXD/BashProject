@@ -18,7 +18,6 @@ function mainMenu {
         *) zenity --error --title="Error Message" --text="Wrong Choice"; mainMenu;;
     esac
 }
-mainMenu
 function createDB {
     dbName=$(zenity --entry --title="Dtabase Name" --text="Enter Database Name");
     if [[ $dbName != "" ]]
@@ -184,7 +183,7 @@ function insert {
         rSep="\n";
         for (( i = 2; i <= $colsNum; i++ ))
         do
-            colName=$(awk 'BEGIN{FS=":"}{ if(NR=='$i') print $1}' .$tableName);
+            colName=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $1}' .$tableName);
             colType=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $2}' .$tableName);
             colKey=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $3}' .$tableName);
             data=$(zenity --entry --title="Column: $colName" --text="Enter Value of Type $colType");
@@ -200,7 +199,7 @@ function insert {
             then
                 while [[ true ]]
                 do
-                    if [[ $data =~ ^[$(awk 'BEGIN{FS=":"; ORS=" "}{if (NR != 1) print $(('$i'-1))}' $tableName 2>> /dev/null)]$ ]]
+                    if [[ $data =~ ^[$(awk 'BEGIN{FS=":"; ORS=" "}{if(NR!=1) print $(('$i'-1))}' $tableName 2>> /dev/null)]$ ]]
                     then
                         zenity --error --title="Error Message" --text="Invalid Input for PK";
                         data=$(zenity --entry --title="Column: $colName" --text="Enter Value of Type $colType");
@@ -234,7 +233,7 @@ function deleteFromTable {
         colsNum=$(awk 'END{print NR}' .$tableName);
         for (( i = 2; i <= $colsNum; i++ ))
         do
-            colName=$(awk 'BEGIN{FS=":"}{ if(NR=='$i') print $1}' .$tableName);
+            colName=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $1}' .$tableName);
             colKey=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $3}' .$tableName);
             ((fID=$i-1));
             if [[ $colKey == "PK" ]]
@@ -245,10 +244,10 @@ function deleteFromTable {
         pkValue=$(zenity --entry --title="PK $colName" --text="Enter Value");
         if [[ $pkValue != "" ]]
         then
-            res=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
+            res=$(awk 'BEGIN{FS=":"}{if($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
             if [[ $res != "" ]]
             then
-                NR=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$pkValue'") print NR}' $tableName);
+                NR=$(awk 'BEGIN{FS=":"}{if($'$fID'=="'$pkValue'") print NR}' $tableName);
                 sed -i ''$NR'd' $tableName 2>> /dev/null;
                 if [[ $? == 0 ]]
                 then
@@ -270,7 +269,7 @@ function updateTable {
         colsNum=$(awk 'END{print NR}' .$tableName);
         for (( i = 2; i <= $colsNum; i++ ))
         do
-            colName=$(awk 'BEGIN{FS=":"}{ if(NR=='$i') print $1}' .$tableName);
+            colName=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $1}' .$tableName);
             colKey=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $3}' .$tableName);
             ((fID=$i-1));
             if [[ $colKey == "PK" ]]
@@ -281,16 +280,16 @@ function updateTable {
         pkValue=$(zenity --entry --title="PK $colName" --text="Enter Value");
         if [[ $pkValue != "" ]]
         then
-            res=$(awk 'BEGIN{FS=":"}{if ($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
+            res=$(awk 'BEGIN{FS=":"}{if($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
             if [[ $res != "" ]]
             then
-                setField=$(zenity --list --title="Tables Fields" --column="Filed" $(awk 'BEGIN{FS=":"; ORS=" "}{if (NR != 1) print $1}' .$tableName));
+                setField=$(zenity --list --title="Tables Fields" --column="Filed" $(awk 'BEGIN{FS=":"; ORS=" "}{if(NR!=1) print $1}' .$tableName));
                 if [[ $setField != "" ]]
                 then
-                    setFid=$(awk 'BEGIN{FS=":"}{if (NR==1) {for (i=1; i<=NF; i++) {if ($i=="'$setField'") print i}}}' $tableName);
+                    setFid=$(awk 'BEGIN{FS=":"}{if(NR==1){for(i=1; i<=NF; i++){if($i=="'$setField'") print i}}}' $tableName);
                     newValue=$(zenity --entry --title="$setField New Value" --text="Enter $setField New Value");
-                    NR=$(awk 'BEGIN{FS=":"}{if ($'$fID' == "'$pkValue'") print NR}' $tableName);
-                    oldValue=$(awk 'BEGIN{FS=":"}{if (NR=='$NR') {for (i=1; i<=NF; i++) {if (i=='$setFid') print $i}}}' $tableName);
+                    NR=$(awk 'BEGIN{FS=":"}{if($'$fID'=="'$pkValue'") print NR}' $tableName);
+                    oldValue=$(awk 'BEGIN{FS=":"}{if(NR=='$NR'){for(i=1; i<=NF; i++){if(i=='$setFid') print $i}}}' $tableName);
                     sed -i ''$NR's/'$oldValue'/'$newValue'/g' $tableName 2>> /dev/null;
                     if [[ $? == 0 ]]
                     then
@@ -310,19 +309,82 @@ function selectMenu {
     ch=$(zenity --list \
     --title="Select Menu" \
     --column="Operations" \
-    "Select All Records" \
+    "Select All" \
     "Select a Column" \
     "Select a Record" \
     "Back To Table Menu" \
     "Back To Main Menu" \
     "Exit");
     case $ch in
-        "Select All Records") echo "Select All Records";;
-        "Select a Column") echo "Select a Column";;
-        "Select a Record") echo "Select a Record";;
+        "Select All") selectAll;;
+        "Select a Column") selectColumn;;
+        "Select a Record") selectRecord;;
         "Back To Table Menu") tableMenu;;
         "Back To Main Menu") cd ../..; mainMenu;;
         "Exit") exit;;
         *) zenity --error --title="Error Message" --text="Wrong Choice"; selectMenu;;
     esac
 }
+function selectAll {
+    tableName=$(zenity --list --title="List of Tables" --column="Table" $(ls -l | cut -d" " -f9));
+    if [[ $tableName != "" ]]
+    then
+        allRecords=$(awk 'BEGIN{FS=":"}{if(NR!=1){for(i=1; i<=NF; i++){print $i}}}' $tableName);
+        if [[ $allRecords != "" ]]
+        then
+            zenity --list --title="List of Records" $(awk 'BEGIN{FS=":"; ORS=" "}{if(NR!=1) print "--column="$1}' .$tableName) $(awk 'BEGIN{FS=":"}{if(NR!=1){for(i=1; i<=NF; i++){print $i}}}' $tableName);
+        else
+            zenity --info --title="Info Message" --text="Table is Empty";
+        fi
+    fi
+    selectMenu;
+}
+function selectColumn {
+    tableName=$(zenity --list --title="List of Tables" --column="Table" $(ls -l | cut -d" " -f9));
+    if [[ $tableName != "" ]]
+    then
+        setField=$(zenity --list --title="Tables Fields" --column="Filed" $(awk 'BEGIN{FS=":"; ORS=" "}{if(NR!=1) print $1}' .$tableName));
+        if [[ $setField != "" ]]
+        then
+            setFid=$(awk 'BEGIN{FS=":"}{if(NR==1){for(i=1; i<=NF; i++){if($i=="'$setField'") print i}}}' $tableName);
+            columnRecords=$(awk 'BEGIN{FS=":"}{if(NR!=1) print $'$setFid'}' $tableName);
+            if [[ $columnRecords != "" ]]
+            then
+                zenity --list --title="List of Column Records" --column=$setField $(awk 'BEGIN{FS=":"}{if(NR!=1) print $'$setFid'}' $tableName);
+            else
+                zenity --info --title="Info Message" --text="Table is Empty";
+            fi
+        fi
+    fi
+    selectMenu;
+}
+function selectRecord {
+    tableName=$(zenity --list --title="List of Tables" --column="Table" $(ls -l | cut -d" " -f9));
+    if [[ $tableName != "" ]]
+    then
+        colsNum=$(awk 'END{print NR}' .$tableName);
+        for (( i = 2; i <= $colsNum; i++ ))
+        do
+            colName=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $1}' .$tableName);
+            colKey=$(awk 'BEGIN{FS=":"}{if(NR=='$i') print $3}' .$tableName);
+            ((fID=$i-1));
+            if [[ $colKey == "PK" ]]
+            then
+                break;
+            fi
+        done
+        pkValue=$(zenity --entry --title="PK $colName" --text="Enter Value");
+        if [[ $pkValue != "" ]]
+        then
+            res=$(awk 'BEGIN{FS=":"}{if($'$fID'=="'$pkValue'") print $'$fID'}' $tableName);
+            if [[ $res != "" ]]
+            then
+                zenity --list --title="The Record" $(awk 'BEGIN{FS=":"; ORS=" "}{if(NR!=1) print "--column="$1}' .$tableName) $(awk 'BEGIN{FS=":"}{if(NR!=1 && $'$fID'=='$pkValue'){for(i=1; i<=NF; i++){print $i}}}' $tableName);
+            else
+                zenity --error --title="Error Message" --text="Value not Found";
+            fi
+        fi
+    fi
+    selectMenu;
+}
+mainMenu;
